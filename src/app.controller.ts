@@ -33,16 +33,28 @@ export class AppController {
     console.log('validAddresses:', validAddresses);
     console.log('wrongAddresses:', wrongAddresses);
 
-    const response = await fetch(this.ethereumPriceUrl);
+    const response = await fetch(this.ethereumPriceUrl); //Coingecko API
     const data = await response.json();
     const ethereumPrice = data.ethereum.usd;
 
     console.log('ethereumPrice:', ethereumPrice);
 
     const walletBalances = [];
-    const walletsAndBalances = [];
+    let walletsAndBalances = [];
 
-    for (let i = 0; i < validAddresses.length; i++) {
+    walletsAndBalances = validAddresses.map(async (address) => {
+      const balanceWei = await this.web3.eth.getBalance(address);
+      const balanceEth =
+        Math.floor(
+          parseFloat(this.web3.utils.fromWei(balanceWei, 'ether')) * 100,
+        ) / 100;
+
+      const usdBalance = Math.floor(address * ethereumPrice * 100) / 100;
+
+      return { address, balanceEth, usdBalance };
+    });
+
+    /* for (let i = 0; i < validAddresses.length; i++) {
       const balanceWei = await this.web3.eth.getBalance(validAddresses[i]);
 
       const balanceEth =
@@ -56,7 +68,7 @@ export class AppController {
         balance: walletBalances[i],
         usd_balances: Math.floor(walletBalances[i] * ethereumPrice * 100) / 100,
       });
-    }
+    } */
 
     console.log('walletsAndBalances:', walletsAndBalances);
 
@@ -64,7 +76,7 @@ export class AppController {
 
     return {
       wrong_addresses: wrongAddresses,
-      wallets_and_balances: walletsAndBalances,
+      wallets_and_balances: await Promise.all(walletsAndBalances),
     };
   }
 }
